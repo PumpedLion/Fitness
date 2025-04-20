@@ -11,14 +11,12 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import jakarta.servlet.http.HttpSession;
 /**
- * Servlet implementation class LoginServlet
+ * Servlet implementation class UserLoginServlet
  */
-@WebServlet("/LoginServlet")
+@WebServlet("/UserLoginServlet")
 public class UserLoginServlet extends HttpServlet {
 
-    /**
-	 * 
-	 */
+  
 	private static final long serialVersionUID = 1L;
 
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)

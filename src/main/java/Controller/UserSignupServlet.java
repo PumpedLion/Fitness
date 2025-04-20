@@ -1,10 +1,7 @@
 package Controller;
 
-
 import Model.User;
-
 import DAO.UserDAO;
-
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -12,9 +9,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
-
 /**
- * Servlet implementation class AdminLoginServlet
+ * Servlet implementation class UserSignupServlet
  */
 @WebServlet("/UserSignupServlet")
 public class UserSignupServlet extends HttpServlet {
@@ -30,8 +26,21 @@ public class UserSignupServlet extends HttpServlet {
         String password = request.getParameter("password");
         String adminKey = request.getParameter("adminkey");
 
-        // Check if adminKey is provided to determine if the user should be an admin
-        boolean isAdmin = (adminKey != null && adminKey.equals("yourAdminKey")); // Replace with your actual admin key logic
+        final String correctAdminKey = "yourAdminKey";  // Replace with your actual key
+
+        boolean isAdmin = false;
+
+        // Check if the user tried to enter an admin key
+        if (adminKey != null && !adminKey.isEmpty()) {
+            if (adminKey.equals(correctAdminKey)) {
+                isAdmin = true;
+            } else {
+                // If admin key is provided but incorrect, redirect with error
+                System.out.println("Admin key is wrong for: " + fullname + ", Email: " + email);
+                response.sendRedirect("View/Index.jsp?error=adminkey");
+                return;
+            }
+        }
 
         // Create a new User object
         User newUser = new User(fullname, email, password, isAdmin);
@@ -42,13 +51,12 @@ public class UserSignupServlet extends HttpServlet {
         // Register the new user
         boolean isRegistered = userDAO.registerUser(newUser);
 
-        // Check if registration was successful
         if (isRegistered) {
             System.out.println("User registered successfully: " + fullname + ", Email: " + email);
-            response.sendRedirect("index.jsp?success=1"); // Redirect to a success page
+            response.sendRedirect("View/Index.jsp");  // Registration success
         } else {
             System.out.println("Error registering user: " + fullname + ", Email: " + email);
-            response.sendRedirect("signup.jsp?error=1"); // Redirect to an error page
+            response.sendRedirect("Viwe/Index.jsp?error=1");  // Registration failed
         }
     }
 }

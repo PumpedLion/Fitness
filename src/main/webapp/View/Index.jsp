@@ -1,4 +1,7 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%
+    String error = request.getParameter("error");
+%>
 <!DOCTYPE html>
 <html>
 <head>
@@ -119,6 +122,11 @@
             margin-top: 10px;
             display: inline-block;
         }
+        .error-msg {
+            color: #f87171;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(-20px); }
             to { opacity: 1; transform: translateY(0); }
@@ -181,6 +189,8 @@
         const content = document.getElementById('modalContent');
         modal.style.display = 'flex';
 
+        let errorMessage = `<%= error != null && error.equals("wrongkey") ? "<div class='error-msg'>Invalid Admin Key. Please try again.</div>" : "" %>`;
+
         if(type === 'user') {
             content.innerHTML = `
                 <h2>User Login</h2>
@@ -201,6 +211,7 @@
                     <div id="adminKeyField" style="display:none; margin-top:10px;">
                         <input type="text" name="adminkey" placeholder="Enter Admin Key">
                     </div>
+                    ${errorMessage}
                     <button type="submit">Sign Up</button>
                 </form>`;
         } 
@@ -230,6 +241,13 @@
             toggleText.textContent = 'Show Admin Options';
         }
     }
+
+    <% if ("wrongkey".equals(error)) { %>
+        // Automatically open signup modal if wrongkey error.
+        window.onload = function() {
+            openModal('signup');
+        }
+    <% } %>
 </script>
 
 </body>
