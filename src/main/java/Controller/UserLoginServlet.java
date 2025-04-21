@@ -1,5 +1,7 @@
 package Controller;
 
+import DAO.UserDAO;
+import Model.User;
 
 
 import jakarta.servlet.RequestDispatcher;
@@ -20,19 +22,31 @@ public class UserLoginServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+	        throws ServletException, IOException {
 
-        String email = request.getParameter("email");
-        String password = request.getParameter("password");
+	    String email = request.getParameter("email");
+	    String password = request.getParameter("password");
 
-        if ("user@example.com".equals(email) && "1234".equals(password)) {
-            HttpSession session = request.getSession();
-            session.setAttribute("userEmail", email);
-            response.sendRedirect("SaveProfile.jsp");  // success
-        } else {
-            request.setAttribute("errorMessage", "Invalid user email or password.");
-            RequestDispatcher rd = request.getRequestDispatcher("index.jsp");
-            rd.forward(request, response);
-        }
-    }
+	    UserDAO userDAO = new UserDAO();
+	    User user = userDAO.loginUser(email, password);
+
+	    if (user != null) {
+	        HttpSession session = request.getSession();
+	        session.setAttribute("userEmail", user.getEmail());
+	        session.setAttribute("userName", user.getFullName());
+	        session.setAttribute("isAdmin", user.isAdmin());
+
+	        // Redirect based on role (optional)
+	        if (user.isAdmin()) {
+	            response.sendRedirect("Admin/AdminDashBoard.jsp");
+	        } else {
+	            response.sendRedirect("View/SaveProfile.jsp");
+	        }
+	    } else {
+	        request.setAttribute("errorMessage", "Invalid email or password.");
+	        RequestDispatcher rd = request.getRequestDispatcher("index.jsp");
+	        rd.forward(request, response);
+	    }
+	}
+
 }
