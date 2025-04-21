@@ -2,6 +2,8 @@ package Controller;
 
 import Model.User;
 import DAO.UserDAO;
+import Utils.PasswordUtils;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -9,9 +11,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
-/**
- * Servlet implementation class UserSignupServlet
- */
 @WebServlet("/UserSignupServlet")
 public class UserSignupServlet extends HttpServlet {
 
@@ -20,43 +19,38 @@ public class UserSignupServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        // Retrieve form parameters
         String fullname = request.getParameter("fullname");
         String email = request.getParameter("email");
         String password = request.getParameter("password");
         String adminKey = request.getParameter("adminkey");
 
         final String correctAdminKey = "yourAdminKey";  // Replace with your actual key
-
         boolean isAdmin = false;
 
-        // Check if the user tried to enter an admin key
         if (adminKey != null && !adminKey.isEmpty()) {
             if (adminKey.equals(correctAdminKey)) {
                 isAdmin = true;
             } else {
-                // If admin key is provided but incorrect, redirect with error
                 System.out.println("Admin key is wrong for: " + fullname + ", Email: " + email);
                 response.sendRedirect("View/Index.jsp?error=adminkey");
                 return;
             }
         }
 
-        // Create a new User object
-        User newUser = new User(fullname, email, password, isAdmin);
+        // Hash the password before storing
+        String hashedPassword = PasswordUtils.hashPassword(password);
 
-        // Create a UserDAO instance to interact with the database
+        User newUser = new User(fullname, email, hashedPassword, isAdmin);
         UserDAO userDAO = new UserDAO();
 
-        // Register the new user
         boolean isRegistered = userDAO.registerUser(newUser);
 
         if (isRegistered) {
             System.out.println("User registered successfully: " + fullname + ", Email: " + email);
-            response.sendRedirect("View/Index.jsp");  // Registration success
+            response.sendRedirect("View/Index.jsp");
         } else {
             System.out.println("Error registering user: " + fullname + ", Email: " + email);
-            response.sendRedirect("Viwe/Index.jsp?error=1");  // Registration failed
+            response.sendRedirect("View/Index.jsp?error=1");
         }
     }
 }
