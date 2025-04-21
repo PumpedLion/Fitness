@@ -1,5 +1,9 @@
 package Controller;
 
+
+import DAO.UserDAO;
+import Model.User;
+
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -27,12 +31,17 @@ public class AdminLoginServlet extends HttpServlet {
         String email = request.getParameter("email");
         String password = request.getParameter("password");
 
-        if ("admin@example.com".equals(email) && "admin123".equals(password)) {
+        UserDAO userDAO = new UserDAO();
+        User user = userDAO.loginUser(email, password);
+
+        if (user != null && user.isAdmin()) {
             HttpSession session = request.getSession();
-            session.setAttribute("adminEmail", email);
-            response.sendRedirect("Admin/AdminDashBoard.jsp"); // success
+            session.setAttribute("adminEmail", user.getEmail());
+            session.setAttribute("adminName", user.getFullName());
+            response.sendRedirect("Admin/AdminDashBoard.jsp");
         } else {
-            request.setAttribute("errorMessage", "Invalid admin credentials.");
+            // Clear error message: Invalid email or password (instead of only saying invalid admin)
+            request.setAttribute("errorMessage", "Wrong Email or Password.");
             RequestDispatcher rd = request.getRequestDispatcher("index.jsp");
             rd.forward(request, response);
         }
