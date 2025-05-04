@@ -120,8 +120,8 @@
     <div class="logo">FitnessPro</div>
     <div>
         <a href="#">Dashboard</a>
-        <a href="#">Dev Rai</a>
-        <a href="#">Logout</a>
+        <a href="#"><%= session.getAttribute("userName") %></a>
+        <a href="LogoutServlet">Logout</a>
     </div>
 </div>
 
@@ -129,7 +129,7 @@
     <div class="title">Your Fitness Dashboard</div>
     <div class="subtitle">Before generating plans, we need to know more about you</div>
 
-    <form action="#" method="post"> <!-- No server action, JavaScript handles redirect -->
+    <form action="${pageContext.request.contextPath}/FitnessProfileServlet" method="post">
         <div class="form-box">
             <h3>Your Fitness Profile</h3>
 
@@ -148,7 +148,7 @@
             </div>
 
             <div class="row">
-                <select name="activityLevel" required>
+                <select name="activity_level" required>
                     <option value="">Select Activity Level</option>
                     <option value="Sedentary">Sedentary (little or no exercise)</option>
                     <option value="Light">Light Exercise (1–3 days/week)</option>
@@ -158,33 +158,23 @@
             </div>
 
             <div class="checkbox-group">
-                <label><input type="checkbox" name="goals" value="Weight Loss">Weight Loss</label>
-                <label><input type="checkbox" name="goals" value="Improved Fitness">Improved Fitness</label>
-                <label><input type="checkbox" name="goals" value="Improved Flexibility">Improved Flexibility</label>
-                <label><input type="checkbox" name="goals" value="Overall Health">Overall Health</label>
-                <label><input type="checkbox" name="goals" value="Muscle Gain">Muscle Gain</label>
-                <label><input type="checkbox" name="goals" value="Increased Strength">Increased Strength</label>
-                <label><input type="checkbox" name="goals" value="Better Endurance">Better Endurance</label>
+                <label><input type="checkbox" name="goal" value="Weight Loss">Weight Loss</label>
+                <label><input type="checkbox" name="goal" value="Improved Fitness">Improved Fitness</label>
+                <label><input type="checkbox" name="goal" value="Improved Flexibility">Improved Flexibility</label>
+                <label><input type="checkbox" name="goal" value="Overall Health">Overall Health</label>
+                <label><input type="checkbox" name="goal" value="Muscle Gain">Muscle Gain</label>
+                <label><input type="checkbox" name="goal" value="Increased Strength">Increased Strength</label>
+                <label><input type="checkbox" name="goal" value="Better Endurance">Better Endurance</label>
             </div>
 
-            <textarea name="healthIssues" placeholder="Health Issues or Limitations (optional)"></textarea>
+            <textarea name="health_issues" placeholder="Health Issues or Limitations (optional)"></textarea>
             <br><br>
-            <textarea name="dietaryRestrictions" placeholder="Dietary Restrictions (optional)"></textarea>
+            <textarea name="dietary_restrictions" placeholder="Dietary Restrictions (optional)"></textarea>
 
             <button type="submit" class="submit-btn">Save Profile</button>
         </div>
     </form>
 </div>
-
-<script>
-    // Intercept form submission and redirect to UserDashBoard.jsp
-    document.querySelector("form").addEventListener("submit", function(e) {
-        e.preventDefault();  // Stop normal form submission
-        // Optional: show a simple confirmation before redirect
-        alert("Profile saved successfully!");
-        window.location.href = "UserDashBoard.jsp";  // Redirect to your dashboard
-    });
-</script>
 
 </body>
 </html>
