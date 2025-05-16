@@ -1,10 +1,24 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8"
     pageEncoding="UTF-8"%>
+<%@ page import="Model.User" %>
+<%@ page import="Model.FitnessProfile" %>
+<%@ page import="java.util.*" %>
+<%@ page import="DAO.UserDAO" %>
+<%@ page import="DAO.FitnessProfileDAO" %>
+<%
+    String userName = (session != null && session.getAttribute("userName") != null)
+                      ? (String) session.getAttribute("userName")
+                      : "Guest";
+    
+    UserDAO userDAO = new UserDAO();
+    FitnessProfileDAO profileDAO = new FitnessProfileDAO();
+    List<User> allUsers = userDAO.getAllUsers();
+%>
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Manage Users - Admin Panel</title>
+    <title>Manage Users</title>
     <style>
         body {
             margin: 0;
@@ -13,225 +27,246 @@
             font-family: Arial, sans-serif;
             color: #FFFFFF;
         }
+
         .navbar {
             background-color: #1E293B;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px 20px;
+            padding: 12px 24px;
         }
+
         .navbar .logo {
             color: #A855F7;
             font-weight: bold;
             font-size: 20px;
         }
+
         .navbar .links {
             display: flex;
-            gap: 15px;
+            gap: 16px;
         }
+
         .navbar .links a {
             color: #FFFFFF;
             text-decoration: none;
-            font-size: 14px;
-            padding: 6px 10px;
+            padding: 6px 12px;
         }
+
         .navbar .links a.active {
             background-color: #A855F7;
             border-radius: 4px;
         }
+
         .navbar .user-badge {
             background-color: #A855F7;
-            padding: 2px 5px;
+            padding: 2px 6px;
             font-size: 12px;
             border-radius: 4px;
             margin-left: 5px;
         }
+
         .container {
-            padding: 20px 40px;
+            padding: 40px;
         }
-        .manage-users-box {
+
+        .card {
             background-color: #1E293B;
             padding: 20px;
             border-radius: 8px;
-        }
-        .manage-users-box h2 {
-            color: #A855F7;
-            margin-bottom: 5px;
-        }
-        .manage-users-box p {
-            margin-bottom: 15px;
-            color: #94A3B8;
-        }
-        .search-bar {
-            width: 100%;
-            padding: 10px;
-            background-color: #334155;
-            border: none;
-            border-radius: 4px;
-            color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.4);
             margin-bottom: 20px;
         }
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
+
+        .card h2 {
+            color: #A855F7;
+            margin-bottom: 20px;
         }
-        .action-buttons a {
-            padding: 8px 16px;
-            border-radius: 4px;
-            text-decoration: none;
-            color: white;
-            font-weight: bold;
-        }
-        .action-buttons .dashboard {
-            background-color: #22C55E;
-        }
-        .action-buttons .create-admin {
-            background-color: #A855F7;
-        }
-        table {
+
+        .users-table {
             width: 100%;
             border-collapse: collapse;
-            background-color: #1E293B;
-            border-radius: 8px;
-            overflow: hidden;
+            margin-top: 20px;
         }
-        th, td {
+
+        .users-table th,
+        .users-table td {
+            padding: 12px;
             text-align: left;
-            padding: 12px 15px;
             border-bottom: 1px solid #334155;
         }
-        th {
-            color: #CBD5E1;
+
+        .users-table th {
+            background-color: #334155;
+            color: #FFFFFF;
+            font-weight: bold;
         }
-        .badge-user {
-            background-color: #2563EB;
-            padding: 3px 7px;
-            border-radius: 4px;
-            font-size: 12px;
+
+        .users-table tr:hover {
+            background-color: #334155;
         }
-        .badge-admin {
-            background-color: #DC2626;
-            padding: 3px 7px;
-            border-radius: 4px;
-            font-size: 12px;
-        }
-        .yes-badge {
-            background-color: #22C55E;
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 12px;
-        }
-        .view-button {
-            border: 1px solid #A855F7;
-            color: #A855F7;
-            padding: 5px 12px;
-            text-decoration: none;
-            border-radius: 4px;
-            margin-right: 8px;
-        }
-        .delete-button {
-            background-color: #DC2626;
-            border: none;
-            padding: 5px 12px;
-            border-radius: 4px;
+
+        .button-delete {
+            background-color: #EF4444;
             color: white;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
             cursor: pointer;
-            text-decoration: none;
+        }
+
+        .button-delete:hover {
+            background-color: #DC2626;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-admin {
+            background-color: #A855F7;
+            color: white;
+        }
+
+        .status-user {
+            background-color: #22C55E;
+            color: white;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #334155;
+            border-radius: 4px;
+            background-color: #1E293B;
+            color: white;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: #A855F7;
+        }
+
+        .message {
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .message.success {
+            background-color: #22C55E;
+            color: white;
+        }
+
+        .message.error {
+            background-color: #EF4444;
+            color: white;
         }
     </style>
 </head>
 <body>
 
 <div class="navbar">
-    <div class="logo">Admin Panel</div>
+    <div class="logo">Manage Users</div>
     <div class="links">
         <a href="AdminDashBoard.jsp">Return to Dashboard</a>
         <a href="Statistics.jsp">Statistics</a>
         <a href="Manage.jsp" class="active">Manage Users</a>
         <a href="AdminPanel.jsp">Admin Profile</a>
         <a href="CreateAdmin.jsp">Create Admin</a>
-        <a href="#">Johan <span class="user-badge">Admin</span></a>
-        <a href="../View/index.jsp">Logout</a>
+        <a href="#"><%= userName %> <span class="user-badge">Admin</span></a>
+        <a href="#" onclick="showLogoutModal(); return false;">Logout</a>
     </div>
 </div>
 
 <div class="container">
-    <div class="manage-users-box">
-        <h2>Manage Users</h2>
-        <p>Manage all users in the system</p>
+    <div class="card">
+        <h2>User Management</h2>
         
-        <input class="search-bar" type="text" placeholder="Search users by name or email...">
+        <% if (request.getParameter("message") != null) { %>
+            <div class="message <%= request.getParameter("type") %>">
+                <%= request.getParameter("message") %>
+            </div>
+        <% } %>
 
-        <div class="action-buttons">
-            <a href="#" class="dashboard">🏠 Dashboard</a>
-            <a href="#" class="create-admin">➕ Create New Admin</a>
-        </div>
+        <input type="text" id="searchInput" class="search-box" placeholder="Search users by name or email..." onkeyup="searchUsers()">
 
-        <table>
+        <table class="users-table">
             <thead>
                 <tr>
+                    <th>ID</th>
                     <th>Name</th>
                     <th>Email</th>
                     <th>Role</th>
-                    <th>Joined</th>
-                    <th>Profile</th>
-                    <th>Plans</th>
+                    <th>Fitness Profile</th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>Dev Rai</td>
-                    <td>raidev3457@gmail.com</td>
-                    <td><span class="badge-user">user</span></td>
-                    <td>Apr 19, 2025, 06:44 PM</td>
-                    <td><span class="yes-badge">Yes</span></td>
-                    <td>1</td>
-                    <td>
-                        <a class="view-button" href="#">View Plans</a>
-                        <a class="delete-button" href="#">Delete</a>
-                    </td>
-                </tr>
-                <tr>
-                    <td>Johan</td>
-                    <td>johanwhite2024@gmail.com</td>
-                    <td><span class="badge-admin">admin</span></td>
-                    <td>Apr 18, 2025, 03:19 PM</td>
-                    <td><span class="yes-badge">Yes</span></td>
-                    <td>0</td>
-                    <td>
-                        <a class="view-button" href="#">View Plans</a>
-                    </td>
-                </tr>
-                <tr>
-                    <td>John Smith</td>
-                    <td>johnsmith2030sj@gmail.com</td>
-                    <td><span class="badge-user">user</span></td>
-                    <td>Apr 18, 2025, 03:11 PM</td>
-                    <td><span class="yes-badge">Yes</span></td>
-                    <td>0</td>
-                    <td>
-                        <a class="view-button" href="#">View Plans</a>
-                        <a class="delete-button" href="#">Delete</a>
-                    </td>
-                </tr>
-                <tr>
-                    <td>Himal</td>
-                    <td>Himal@gmail.com</td>
-                    <td><span class="badge-user">user</span></td>
-                    <td>Apr 17, 2025, 02:55 PM</td>
-                    <td><span class="yes-badge">Yes</span></td>
-                    <td>1</td>
-                    <td>
-                        <a class="view-button" href="#">View Plans</a>
-                        <a class="delete-button" href="#">Delete</a>
-                    </td>
-                </tr>
+                <% for (User user : allUsers) { 
+                    FitnessProfile profile = profileDAO.getFitnessProfileByUserId(user.getId());
+                %>
+                    <tr>
+                        <td><%= user.getId() %></td>
+                        <td><%= user.getFullName() %></td>
+                        <td><%= user.getEmail() %></td>
+                        <td>
+                            <span class="status-badge <%= user.isAdmin() ? "status-admin" : "status-user" %>">
+                                <%= user.isAdmin() ? "Admin" : "User" %>
+                            </span>
+                        </td>
+                        <td>
+                            <% if (profile != null) { %>
+                                <span class="status-badge status-user">Has Profile</span>
+                            <% } else { %>
+                                <span class="status-badge status-admin">No Profile</span>
+                            <% } %>
+                        </td>
+                        <td>
+                            <form action="../UserDeleteServlet" method="post" style="display: inline;">
+                                <input type="hidden" name="userId" value="<%= user.getId() %>">
+                                <button type="submit" class="button-delete" onclick="return confirm('Are you sure you want to delete this user and their fitness profile?')">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                <% } %>
             </tbody>
         </table>
     </div>
 </div>
 
+<script>
+function searchUsers() {
+    const input = document.getElementById('searchInput');
+    const filter = input.value.toLowerCase();
+    const table = document.querySelector('.users-table');
+    const rows = table.getElementsByTagName('tr');
+
+    for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const cells = row.getElementsByTagName('td');
+        let found = false;
+
+        for (let j = 0; j < cells.length; j++) {
+            const cell = cells[j];
+            if (cell) {
+                const text = cell.textContent || cell.innerText;
+                if (text.toLowerCase().indexOf(filter) > -1) {
+                    found = true;
+                    break;
+                }
+            }
+        }
+
+        row.style.display = found ? '' : 'none';
+    }
+}
+</script>
+
+<script src="../js/logout.js"></script>
 </body>
 </html>

@@ -1,7 +1,9 @@
 package Controller;
 
 import DAO.UserDAO;
+import DAO.FitnessProfileDAO;
 import Model.User;
+import Model.FitnessProfile;
 import Utils.PasswordUtils;
 
 import jakarta.servlet.RequestDispatcher;
@@ -32,9 +34,23 @@ public class AdminLoginServlet extends HttpServlet {
 
         if (user != null && user.isAdmin()) {
             HttpSession session = request.getSession();
-            session.setAttribute("adminEmail", user.getEmail());
-            session.setAttribute("adminName", user.getFullName());
-            response.sendRedirect("Admin/AdminDashBoard.jsp");
+            session.setAttribute("userId", user.getId());
+            session.setAttribute("userName", user.getFullName());
+            session.setAttribute("userEmail", user.getEmail());
+            session.setAttribute("isAdmin", true);
+
+            // Check if admin has a fitness profile
+            FitnessProfileDAO profileDAO = new FitnessProfileDAO();
+            FitnessProfile profile = profileDAO.getFitnessProfileByUserId(user.getId());
+
+            if (profile != null) {
+                // Admin has a profile, set it in session and redirect to dashboard
+                session.setAttribute("fitnessProfile", profile);
+                response.sendRedirect("Admin/AdminDashBoard.jsp");
+            } else {
+                // No profile, redirect to create profile page
+                response.sendRedirect("View/SaveProfile.jsp");
+            }
         } else {
             request.setAttribute("errorMessage", "Wrong Email or Password.");
             RequestDispatcher rd = request.getRequestDispatcher("index.jsp");

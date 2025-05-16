@@ -1,7 +1,9 @@
 package Controller;
 
 import Model.User;
+import Model.FitnessProfile;
 import DAO.UserDAO;
+import DAO.FitnessProfileDAO;
 import Utils.PasswordUtils;
 
 import jakarta.servlet.ServletException;
@@ -9,6 +11,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 
 @WebServlet("/UserSignupServlet")
@@ -47,7 +50,33 @@ public class UserSignupServlet extends HttpServlet {
 
         if (isRegistered) {
             System.out.println("User registered successfully: " + fullname + ", Email: " + email);
-            response.sendRedirect("View/Index.jsp");
+            
+            // Get the registered user to get their ID
+            User registeredUser = userDAO.loginUser(email, hashedPassword);
+            
+            if (registeredUser != null) {
+                // Set user session attributes
+                HttpSession session = request.getSession();
+                session.setAttribute("userId", registeredUser.getId());
+                session.setAttribute("userName", registeredUser.getFullName());
+                session.setAttribute("userEmail", registeredUser.getEmail());
+                session.setAttribute("isAdmin", registeredUser.isAdmin());
+                
+                // Check if user has a fitness profile
+                FitnessProfileDAO profileDAO = new FitnessProfileDAO();
+                FitnessProfile profile = profileDAO.getFitnessProfileByUserId(registeredUser.getId());
+                
+                if (profile != null) {
+                    // User has a profile, redirect to dashboard
+                    session.setAttribute("fitnessProfile", profile);
+                    response.sendRedirect("View/UserDashBoard.jsp");
+                } else {
+                    // No profile, redirect to create profile page
+                    response.sendRedirect("View/SaveProfile.jsp");
+                }
+            } else {
+                response.sendRedirect("View/Index.jsp?error=login");
+            }
         } else {
             System.out.println("Error registering user: " + fullname + ", Email: " + email);
             response.sendRedirect("View/Index.jsp?error=1");

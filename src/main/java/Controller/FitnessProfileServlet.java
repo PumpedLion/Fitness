@@ -3,7 +3,6 @@ package Controller;
 import DAO.FitnessProfileDAO;
 import Model.FitnessProfile;
 
-import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -37,6 +36,7 @@ public class FitnessProfileServlet extends HttpServlet {
         }
 
         int userId = (int) session.getAttribute("userId");
+        boolean isAdmin = session.getAttribute("isAdmin") != null && (boolean) session.getAttribute("isAdmin");
 
         String ageStr = request.getParameter("age");
         String gender = request.getParameter("gender");
@@ -52,44 +52,84 @@ public class FitnessProfileServlet extends HttpServlet {
             int height = Integer.parseInt(heightStr);
             int weight = Integer.parseInt(weightStr);
 
-            FitnessProfile profile = new FitnessProfile();
-            profile.setUserId(userId);
-            profile.setAge(age);
-            profile.setGender(gender);
-            profile.setHeight(height);
-            profile.setWeight(weight);
-            profile.setGoal(goal);
-            profile.setActivityLevel(activityLevel);
+            // Check if user already has a profile
+            FitnessProfile existingProfile = profileDAO.getFitnessProfileByUserId(userId);
+            FitnessProfile profile;
 
-            // Handle optional fields
-            profile.setHealthIssues((healthIssues != null && !healthIssues.trim().isEmpty()) ? healthIssues : null);
-            profile.setDietaryRestrictions((dietaryRestrictions != null && !dietaryRestrictions.trim().isEmpty()) ? dietaryRestrictions : null);
-
-            boolean success = profileDAO.saveFitnessProfile(profile);
-
-            if (success) {
-                request.setAttribute("message", "Fitness profile saved successfully!");
+            if (existingProfile != null) {
+                // Update existing profile
+                profile = existingProfile;
+                profile.setAge(age);
+                profile.setGender(gender);
+                profile.setHeight(height);
+                profile.setWeight(weight);
+                profile.setGoal(goal);
+                profile.setActivityLevel(activityLevel);
+                profile.setHealthIssues((healthIssues != null && !healthIssues.trim().isEmpty()) ? healthIssues : null);
+                profile.setDietaryRestrictions((dietaryRestrictions != null && !dietaryRestrictions.trim().isEmpty()) ? dietaryRestrictions : null);
                 
-             // Set profile in request so it can be displayed in JSP
-                request.setAttribute("profile", profile);
-                
-                RequestDispatcher rd = request.getRequestDispatcher("View/UserDashBoard.jsp");
-                rd.forward(request, response);
+                boolean success = profileDAO.updateFitnessProfile(profile);
+                if (success) {
+                    session.setAttribute("fitnessProfile", profile);
+                    session.setAttribute("message", "Fitness profile updated successfully!");
+                    // Redirect based on user type
+                    if (isAdmin) {
+                        response.sendRedirect("Admin/AdminDashBoard.jsp");
+                    } else {
+                        response.sendRedirect("View/UserDashBoard.jsp");
+                    }
+                } else {
+                    session.setAttribute("error", "Failed to update profile. Please try again.");
+                    if (isAdmin) {
+                        response.sendRedirect("Admin/AdminDashBoard.jsp");
+                    } else {
+                        response.sendRedirect("View/UserDashBoard.jsp");
+                    }
+                }
             } else {
-                request.setAttribute("error", "Failed to save profile. Please try again.");
-                RequestDispatcher rd = request.getRequestDispatcher("View/SaveProfile.jsp");
-                rd.forward(request, response);
+                // Create new profile
+                profile = new FitnessProfile();
+                profile.setUserId(userId);
+                profile.setAge(age);
+                profile.setGender(gender);
+                profile.setHeight(height);
+                profile.setWeight(weight);
+                profile.setGoal(goal);
+                profile.setActivityLevel(activityLevel);
+                profile.setHealthIssues((healthIssues != null && !healthIssues.trim().isEmpty()) ? healthIssues : null);
+                profile.setDietaryRestrictions((dietaryRestrictions != null && !dietaryRestrictions.trim().isEmpty()) ? dietaryRestrictions : null);
+
+                boolean success = profileDAO.saveFitnessProfile(profile);
+                if (success) {
+                    session.setAttribute("fitnessProfile", profile);
+                    session.setAttribute("message", "Fitness profile saved successfully!");
+                    // Redirect based on user type
+                    if (isAdmin) {
+                        response.sendRedirect("Admin/AdminDashBoard.jsp");
+                    } else {
+                        response.sendRedirect("View/UserDashBoard.jsp");
+                    }
+                } else {
+                    session.setAttribute("error", "Failed to save profile. Please try again.");
+                    response.sendRedirect("View/SaveProfile.jsp");
+                }
             }
 
         } catch (NumberFormatException e) {
-            request.setAttribute("error", "Please enter valid numbers for age, height, and weight.");
-            RequestDispatcher rd = request.getRequestDispatcher("View/SaveProfile.jsp");
-            rd.forward(request, response);
+            session.setAttribute("error", "Please enter valid numbers for age, height, and weight.");
+            if (isAdmin) {
+                response.sendRedirect("Admin/AdminDashBoard.jsp");
+            } else {
+                response.sendRedirect("View/UserDashBoard.jsp");
+            }
         } catch (Exception e) {
             e.printStackTrace();
-            request.setAttribute("error", "Unexpected error occurred.");
-            RequestDispatcher rd = request.getRequestDispatcher("View/SaveProfile.jsp");
-            rd.forward(request, response);
+            session.setAttribute("error", "Unexpected error occurred.");
+            if (isAdmin) {
+                response.sendRedirect("Admin/AdminDashBoard.jsp");
+            } else {
+                response.sendRedirect("View/UserDashBoard.jsp");
+            }
         }
     }
 }

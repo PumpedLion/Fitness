@@ -5,7 +5,7 @@
                       ? (String) session.getAttribute("userName")
                       : "Guest";
 
-    FitnessProfile profile = (FitnessProfile) request.getAttribute("profile");
+    FitnessProfile profile = (FitnessProfile) session.getAttribute("fitnessProfile");
 %>
 <!DOCTYPE html>
 <html lang="en">
@@ -172,7 +172,7 @@
     <a href="#">FitnessPro</a>
     <div class="right">
       <span><%= userName %></span>
-      <a href="LogoutServlet">Logout</a>
+      <a href="#" onclick="showLogoutModal(); return false;">Logout</a>
     </div>
   </div>
 
@@ -322,5 +322,6 @@
     }
   </script>
 
+  <script src="../Assets/js/logout.js"></script>
 </body>
 </html>
