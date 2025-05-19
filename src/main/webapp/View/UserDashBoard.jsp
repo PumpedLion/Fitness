@@ -299,16 +299,30 @@
       <div class="card">
         <h2>Generate New Plan</h2>
         <p class="subtitle">Create a personalized fitness and meal plan based on your profile</p>
-        <form>
+        <form id="generatePlanForm" onsubmit="generatePlan(event)">
           <div class="form-group">
             <label for="plan-title">Plan Title (Optional)</label>
-            <input type="text" id="plan-title" placeholder="Enter a title for your plan">
+            <input type="text" id="plan-title" name="title" placeholder="Enter a title for your plan">
           </div>
           <button class="btn" type="submit">Generate New Plan</button>
         </form>
       </div>
 
     </div>
+
+    <!-- Meal Plans Section -->
+    <div class="col-md-12 mb-4">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="mb-0">Meal Plans</h5>
+        </div>
+        <div class="card-body">
+          <p>Generate personalized meal plans based on your fitness profile.</p>
+          <a href="MealPlans.jsp" class="btn btn-primary">View Meal Plans</a>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <div class="footer">
@@ -319,6 +333,41 @@
     function toggleEditForm() {
       const form = document.getElementById("editForm");
       form.style.display = (form.style.display === "none" || form.style.display === "") ? "block" : "none";
+    }
+
+    function generatePlan(event) {
+      event.preventDefault();
+      const title = document.getElementById('plan-title').value;
+      
+      // Create URL-encoded form data
+      const formData = new URLSearchParams();
+      formData.append('action', 'generate');
+      formData.append('title', title);
+
+      fetch('${pageContext.request.contextPath}/MealPlanServlet', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (data.error) {
+          throw new Error(data.error);
+        }
+        alert('Meal plan generated successfully!');
+        window.location.href = 'MealPlans.jsp';
+      })
+      .catch(error => {
+        console.error('Error generating plan:', error);
+        alert('Failed to generate meal plan: ' + error.message);
+      });
     }
   </script>
 
