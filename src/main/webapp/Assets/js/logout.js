@@ -90,7 +90,7 @@ function closeLogoutModal() {
 function confirmLogout() {
     const form = document.createElement('form');
     form.method = 'POST';
-    form.action = '/UserLogoutServlet';
+    form.action = '${pageContext.request.contextPath}/UserLogoutServlet';
     document.body.appendChild(form);
     form.submit();
 }

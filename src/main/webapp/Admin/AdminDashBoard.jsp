@@ -105,6 +105,62 @@
             background-color: #334155;
             color: #FFFFFF;
         }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: #1E293B;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            width: 300px;
+            text-align: center;
+            color: white;
+        }
+
+        .modal-buttons {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .confirm-btn {
+            background-color: #EF4444;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .confirm-btn:hover {
+            background-color: #DC2626;
+        }
+
+        .cancel-btn {
+            background-color: #334155;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .cancel-btn:hover {
+            background-color: #475569;
+        }
     </style>
 </head>
 <body>
@@ -116,6 +172,18 @@
             <a href="CreateAdmin.jsp">Create Admin</a>
             <a href="#"><%= userName %> <span class="user-badge">Admin</span></a>
             <a href="#" onclick="showLogoutModal(); return false;">Logout</a>
+        </div>
+    </div>
+
+    <!-- Logout Modal -->
+    <div id="logoutModal" class="modal">
+        <div class="modal-content">
+            <h2>Confirm Logout</h2>
+            <p>Are you sure you want to logout?</p>
+            <div class="modal-buttons">
+                <button onclick="confirmLogout()" class="confirm-btn">Yes, Logout</button>
+                <button onclick="closeLogoutModal()" class="cancel-btn">Cancel</button>
+            </div>
         </div>
     </div>
 
@@ -233,7 +301,6 @@
             event.preventDefault();
             const title = document.getElementById('plan-title').value;
             
-            // Create URL-encoded form data
             const formData = new URLSearchParams();
             formData.append('action', 'generate');
             formData.append('title', title);
@@ -263,9 +330,32 @@
                 alert('Failed to generate meal plan: ' + error.message);
             });
         }
-    </script>
 
-    <script src="../js/logout.js"></script>
+        // Logout Modal Functions
+        function showLogoutModal() {
+            document.getElementById('logoutModal').style.display = 'block';
+        }
+
+        function closeLogoutModal() {
+            document.getElementById('logoutModal').style.display = 'none';
+        }
+
+        function confirmLogout() {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '${pageContext.request.contextPath}/UserLogoutServlet';
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('logoutModal');
+            if (event.target == modal) {
+                closeLogoutModal();
+            }
+        }
+    </script>
 
 </body>
 </html>

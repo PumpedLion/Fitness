@@ -66,6 +66,60 @@
     <meta charset="UTF-8">
     <title>Fitness Statistics</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Add this at the beginning of the script to get the context path
+        const contextPath = '${pageContext.request.contextPath}';
+
+        // Logout Modal Functions
+        function showLogoutModal() {
+            const modal = document.getElementById('logoutModal');
+            if (modal) {
+                modal.style.display = 'block';
+                modal.style.zIndex = '9999';
+            }
+        }
+
+        function closeLogoutModal() {
+            const modal = document.getElementById('logoutModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        function confirmLogout() {
+            try {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = contextPath + '/UserLogoutServlet';
+                document.body.appendChild(form);
+                form.submit();
+            } catch (error) {
+                console.error('Error during logout:', error);
+                window.location.href = contextPath + '/UserLogoutServlet';
+            }
+        }
+
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = document.getElementById('logoutModal');
+            if (modal) {
+                modal.style.display = 'none';
+                modal.style.position = 'fixed';
+                modal.style.top = '0';
+                modal.style.left = '0';
+                modal.style.width = '100%';
+                modal.style.height = '100%';
+            }
+
+            // Close modal when clicking outside
+            window.onclick = function(event) {
+                const modal = document.getElementById('logoutModal');
+                if (event.target == modal) {
+                    closeLogoutModal();
+                }
+            }
+        });
+    </script>
     <style>
         body {
             margin: 0;
@@ -187,6 +241,62 @@
             cursor: pointer;
             margin-top: 10px;
         }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: #1E293B;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            width: 300px;
+            text-align: center;
+            color: white;
+        }
+
+        .modal-buttons {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .confirm-btn {
+            background-color: #EF4444;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .confirm-btn:hover {
+            background-color: #DC2626;
+        }
+
+        .cancel-btn {
+            background-color: #334155;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .cancel-btn:hover {
+            background-color: #475569;
+        }
     </style>
 </head>
 <body>
@@ -200,7 +310,19 @@
         <a href="AdminPanel.jsp">Admin Profile</a>
         <a href="CreateAdmin.jsp">Create Admin</a>
         <a href="#"><%= userName %> <span class="user-badge">Admin</span></a>
-        <a href="../View/index.jsp">Logout</a>
+        <a href="javascript:void(0)" onclick="showLogoutModal()">Logout</a>
+    </div>
+</div>
+
+<!-- Logout Modal -->
+<div id="logoutModal" class="modal">
+    <div class="modal-content">
+        <h2>Confirm Logout</h2>
+        <p>Are you sure you want to logout?</p>
+        <div class="modal-buttons">
+            <button onclick="confirmLogout()" class="confirm-btn">Yes, Logout</button>
+            <button onclick="closeLogoutModal()" class="cancel-btn">Cancel</button>
+        </div>
     </div>
 </div>
 

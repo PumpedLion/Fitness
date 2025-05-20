@@ -5,6 +5,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 
 /**
@@ -26,8 +27,24 @@ public class UserLogoutServlet extends HttpServlet {
 	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		// TODO Auto-generated method stub
-		response.getWriter().append("Served at: ").append(request.getContextPath());
+		// Get the current session
+		HttpSession session = request.getSession(false);
+		
+		if (session != null) {
+			// Remove all session attributes
+			session.removeAttribute("userId");
+			session.removeAttribute("userName");
+			session.removeAttribute("userEmail");
+			session.removeAttribute("isAdmin");
+			session.removeAttribute("fitnessProfile");
+			
+			// Invalidate the session
+			session.invalidate();
+		}
+		
+		// Get the context path and redirect to the login page
+		String contextPath = request.getContextPath();
+		response.sendRedirect(contextPath + "/View/Index.jsp");
 	}
 
 	/**
