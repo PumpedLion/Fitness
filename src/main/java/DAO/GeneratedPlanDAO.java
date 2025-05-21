@@ -89,4 +89,15 @@ public class GeneratedPlanDAO {
         }
         return null;
     }
+
+    public boolean deleteAllPlansByUserId(int userId) {
+        String query = "DELETE FROM generated_plans WHERE user_id = ?";
+        try (PreparedStatement stmt = connection.prepareStatement(query)) {
+            stmt.setInt(1, userId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 } 

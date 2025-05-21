@@ -167,10 +167,14 @@ public class MealPlanServlet extends HttpServlet {
 
             // Create a combined prompt for both workout and meal plans
             String prompt = String.format(
-                "Create a comprehensive 7-day fitness plan for a %d-year-old %s, weight: %dkg, height: %dcm, with activity level: %s. Their fitness goals are: %s. Health issues to consider: %s\n Dietary restrictions: %s\n\n" +
-                "Please provide two sections:\n" +
-                "1. WORKOUT PLAN: Include specific exercises, sets, reps, and rest periods for each day. Include warm-up and cool-down routines.\n" +
-                "2. MEAL PLAN: Include breakfast, lunch, dinner, and snacks for each day, with portion sizes and approximate calorie counts.\n" +
+                "Create a comprehensive 7-day fitness plan for a %d-year-old %s, weight: %dkg, height: %dcm, with activity level: %s. Their fitness goals are: %s. %s%s\n\n" +
+                "Please provide the plan in exactly this format:\n\n" +
+                "## 1. WORKOUT PLAN\n" +
+                "[Your workout plan here]\n\n" +
+                "## 2. MEAL PLAN\n" +
+                "[Your meal plan here]\n\n" +
+                "For the workout plan, include specific exercises, sets, reps, and rest periods for each day. Include warm-up and cool-down routines.\n" +
+                "For the meal plan, include breakfast, lunch, dinner, and snacks for each day, with portion sizes and approximate calorie counts.\n" +
                 "Format each section clearly with day-by-day breakdowns.",
                 profile.getAge(),
                 profile.getGender(),
@@ -193,13 +197,18 @@ public class MealPlanServlet extends HttpServlet {
             // Split the plan into workout and meal sections
             String[] sections = combinedPlan.split("##\\s*2\\.\\s*MEAL\\s*PLAN");
             if (sections.length != 2) {
-                System.out.println("Failed to split plan into sections. Number of sections: " + sections.length);
-                System.out.println("Plan content: " + combinedPlan);
-                throw new Exception("Failed to parse the generated plan into workout and meal sections");
+                // Try alternative splitting if the first attempt fails
+                sections = combinedPlan.split("##\\s*MEAL\\s*PLAN");
+                if (sections.length != 2) {
+                    System.out.println("Failed to split plan into sections. Number of sections: " + sections.length);
+                    System.out.println("Plan content: " + combinedPlan);
+                    throw new Exception("Failed to parse the generated plan into workout and meal sections");
+                }
             }
 
             // Extract workout plan (remove the first section header)
             String workoutPlan = sections[0].replaceAll("##\\s*1\\.\\s*WORKOUT\\s*PLAN", "").trim();
+            workoutPlan = workoutPlan.replaceAll("##\\s*WORKOUT\\s*PLAN", "").trim();
             
             // Add back the meal plan header
             String mealPlan = "## 2. MEAL PLAN" + sections[1].trim();
@@ -220,15 +229,28 @@ public class MealPlanServlet extends HttpServlet {
 
             if (success) {
                 response.setContentType("application/json");
-                // Create a JSON object with properly escaped strings
+                // Get all plans for the user to return in response
+                List<GeneratedPlan> allPlans = planDAO.getPlansByUserId(userId);
+                StringBuilder jsonPlans = new StringBuilder("[");
+                for (int i = 0; i < allPlans.size(); i++) {
+                    if (i > 0) jsonPlans.append(",");
+                    GeneratedPlan p = allPlans.get(i);
+                    jsonPlans.append(String.format(
+                        "{\"id\":%d,\"userId\":%d,\"title\":\"%s\",\"workoutPlan\":\"%s\",\"mealPlan\":\"%s\",\"createdAt\":\"%s\"}",
+                        p.getId(),
+                        p.getUserId(),
+                        escapeJsonString(p.getTitle()),
+                        escapeJsonString(p.getWorkoutPlan()),
+                        escapeJsonString(p.getMealPlan()),
+                        p.getCreatedAt()
+                    ));
+                }
+                jsonPlans.append("]");
+                
+                // Create a JSON response with status and plans
                 String jsonResponse = String.format(
-                    "{\"status\":\"success\",\"message\":\"Plan generated successfully\",\"plan\":{\"id\":%d,\"userId\":%d,\"title\":\"%s\",\"workoutPlan\":\"%s\",\"mealPlan\":\"%s\",\"createdAt\":\"%s\"}}",
-                    plan.getId(),
-                    plan.getUserId(),
-                    escapeJsonString(plan.getTitle()),
-                    escapeJsonString(plan.getWorkoutPlan()),
-                    escapeJsonString(plan.getMealPlan()),
-                    plan.getCreatedAt()
+                    "{\"status\":\"success\",\"message\":\"Plan generated successfully\",\"plans\":%s}",
+                    jsonPlans.toString()
                 );
                 response.getWriter().write(jsonResponse);
             } else {

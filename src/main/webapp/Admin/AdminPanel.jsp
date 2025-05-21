@@ -1,11 +1,29 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8"
     pageEncoding="UTF-8"%>
 <%@ page import="Model.FitnessProfile" %>
+<%@ page import="Model.GeneratedPlan" %>
+<%@ page import="java.util.List" %>
+<%@ page import="DAO.GeneratedPlanDAO" %>
 <%
     String userName = (session != null && session.getAttribute("userName") != null)
                       ? (String) session.getAttribute("userName")
                       : "Guest";
     FitnessProfile profile = (FitnessProfile) session.getAttribute("fitnessProfile");
+    List<GeneratedPlan> plans = (List<GeneratedPlan>) session.getAttribute("userPlans");
+    
+    // If plans are not in session, try to get them from the database
+    if (plans == null) {
+        try {
+            GeneratedPlanDAO planDAO = new GeneratedPlanDAO();
+            Integer userId = (Integer) session.getAttribute("userId");
+            if (userId != null) {
+                plans = planDAO.getPlansByUserId(userId);
+                session.setAttribute("userPlans", plans);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
     
     // Calculate BMI if profile exists
     double bmi = 0;
@@ -239,6 +257,77 @@
             background-color: #475569;
         }
 
+        /* Plan Card Styles */
+        .plan-card {
+            background-color: #1e293b;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .plan-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .plan-title {
+            font-size: 24px;
+            color: #A855F7;
+            margin: 0;
+        }
+
+        .plan-date {
+            color: #94a3b8;
+            font-size: 14px;
+        }
+
+        .plan-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .plan-section {
+            background-color: #334155;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .plan-section h3 {
+            color: #A855F7;
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .plan-section pre {
+            color: #e2e8f0;
+            white-space: pre-wrap;
+            font-family: inherit;
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .delete-plan-btn {
+            background-color: #ef4444;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        .delete-plan-btn:hover {
+            background-color: #dc2626;
+        }
+
     </style>
 </head>
 <body>
@@ -350,9 +439,35 @@
     <!-- Bottom Row: Generated Plans -->
     <div class="card generated-plans">
         <h2>Generated Plans</h2>
-        <div class="info-item note">No fitness plans generated yet</div>
-        <button class="button-purple">Generate Your First Plan</button>
-        <button class="button-green" onclick="window.location.href='AdminDashBoard.jsp'">🏠 Return to Dashboard</button>
+        <div class="plans-container">
+            <% if (plans != null && !plans.isEmpty()) { %>
+                <% for (GeneratedPlan plan : plans) { %>
+                    <div class="plan-card">
+                        <div class="plan-header">
+                            <h2 class="plan-title"><%= plan.getTitle() %></h2>
+                            <div>
+                                <span class="plan-date">Created: <%= plan.getCreatedAt() %></span>
+                                <button class="delete-plan-btn" onclick="deletePlan(<%= plan.getId() %>)">Delete Plan</button>
+                            </div>
+                        </div>
+                        <div class="plan-content">
+                            <div class="plan-section">
+                                <h3>Workout Plan</h3>
+                                <pre><%= plan.getWorkoutPlan() %></pre>
+                            </div>
+                            <div class="plan-section">
+                                <h3>Meal Plan</h3>
+                                <pre><%= plan.getMealPlan() %></pre>
+                            </div>
+                        </div>
+                    </div>
+                <% } %>
+            <% } else { %>
+                <div class="info-item note">No fitness plans generated yet</div>
+                <button class="button-purple" onclick="window.location.href='AdminDashBoard.jsp'">Generate Your First Plan</button>
+            <% } %>
+        </div>
+        <button class="button-green" onclick="window.location.href='AdminDashBoard.jsp'" style="margin-top: 20px;">🏠 Return to Dashboard</button>
     </div>
 </div>
 
@@ -379,6 +494,36 @@
         const modal = document.getElementById('logoutModal');
         if (event.target == modal) {
             closeLogoutModal();
+        }
+    }
+
+    function deletePlan(planId) {
+        if (confirm('Are you sure you want to delete this plan?')) {
+            fetch('../MealPlanServlet', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'action=delete&planId=' + planId
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Remove the deleted plan from the display
+                    const planCard = document.querySelector(`[data-plan-id="${planId}"]`);
+                    if (planCard) {
+                        planCard.remove();
+                    }
+                    // Reload the page to refresh the plans list
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while deleting the plan');
+            });
         }
     }
 </script>

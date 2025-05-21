@@ -1,6 +1,32 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%
     String error = request.getParameter("error");
+    String type = request.getParameter("type");
+    String errorMessage = null;
+    String modalType = null;
+
+    if (error != null) {
+        if ("invalid".equals(error)) {
+            if ("admin".equals(type)) {
+                errorMessage = "Invalid admin credentials. Please try again.";
+                modalType = "admin";
+            } else {
+                errorMessage = "Invalid email or password. Please try again.";
+                modalType = "login";
+            }
+        } else if ("empty".equals(error)) {
+            if ("admin".equals(type)) {
+                errorMessage = "Please enter both email and password.";
+                modalType = "admin";
+            } else {
+                errorMessage = "Please enter both email and password.";
+                modalType = "login";
+            }
+        } else if ("invalidKey".equals(error)) {
+            errorMessage = "Invalid admin key. Please try again.";
+            modalType = "signup";
+        }
+    }
 %>
 <!DOCTYPE html>
 <html>
@@ -124,8 +150,27 @@
         }
         .error-msg {
             color: #f87171;
-            margin-top: 10px;
+            margin: 10px 0;
+            padding: 10px;
+            background-color: rgba(248, 113, 113, 0.1);
+            border: 1px solid #f87171;
+            border-radius: 6px;
             font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .error-msg i {
+            margin-right: 8px;
+            color: #f87171;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .error-shake {
+            animation: shake 0.5s ease-in-out;
         }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(-20px); }
@@ -189,8 +234,6 @@
         const content = document.getElementById('modalContent');
         modal.style.display = 'flex';
 
-        let errorMessage = `<%= error != null && error.equals("wrongkey") ? "<div class='error-msg'>Invalid Admin Key. Please try again.</div>" : "" %>`;
-
         if(type === 'user') {
             content.innerHTML = `
                 <h2>User Login</h2>
@@ -211,7 +254,6 @@
                     <div id="adminKeyField" style="display:none; margin-top:10px;">
                         <input type="text" name="adminkey" placeholder="Enter Admin Key">
                     </div>
-                    ${errorMessage}
                     <button type="submit">Sign Up</button>
                 </form>`;
         } 
@@ -242,13 +284,55 @@
         }
     }
 
-    <% if ("wrongkey".equals(error)) { %>
-        // Automatically open signup modal if wrongkey error.
-        window.onload = function() {
-            openModal('signup');
+    // Show error popup and open modal
+    window.onload = function() {
+        var errorMsg = document.getElementById('errorMessage').value;
+        var modalToOpen = document.getElementById('modalType').value;
+        
+        if (errorMsg && errorMsg !== '') {
+            alert(errorMsg);
+            if (modalToOpen && modalToOpen !== '') {
+                // Set modal content before opening
+                const content = document.getElementById('modalContent');
+                if (modalToOpen === 'login') {
+                    content.innerHTML = `
+                        <h2>User Login</h2>
+                        <form id="userLoginForm" action="${pageContext.request.contextPath}/UserLoginServlet" method="post">
+                            <input type="email" name="email" placeholder="Email" required>
+                            <input type="password" name="password" placeholder="Password" required>
+                            <button type="submit">Login</button>
+                        </form>`;
+                } else if (modalToOpen === 'admin') {
+                    content.innerHTML = `
+                        <h2>Admin Login</h2>
+                        <form id="adminLoginForm" action="${pageContext.request.contextPath}/AdminLoginServlet" method="post">
+                            <input type="email" name="email" placeholder="Admin Email" required>
+                            <input type="password" name="password" placeholder="Admin Password" required>
+                            <button type="submit">Login</button>
+                        </form>`;
+                } else if (modalToOpen === 'signup') {
+                    content.innerHTML = `
+                        <h2>User Sign Up</h2>
+                        <form id="signupForm" action="${pageContext.request.contextPath}/UserSignupServlet" method="post">
+                            <input type="text" name="fullname" placeholder="Full Name" required>
+                            <input type="email" name="email" placeholder="Email" required>
+                            <input type="password" name="password" placeholder="Password" required>
+                            <span class="toggle-admin" onclick="toggleAdmin()">Show Admin Options</span>
+                            <div id="adminKeyField" style="display:none; margin-top:10px;">
+                                <input type="text" name="adminkey" placeholder="Enter Admin Key">
+                            </div>
+                            <button type="submit">Sign Up</button>
+                        </form>`;
+                }
+                document.getElementById('modalOverlay').style.display = 'flex';
+            }
         }
-    <% } %>
+    };
 </script>
+
+<!-- Hidden fields to store error information -->
+<input type="hidden" id="errorMessage" value="<%= errorMessage != null ? errorMessage : "" %>">
+<input type="hidden" id="modalType" value="<%= modalType != null ? modalType : "" %>">
 
 </body>
 </html>

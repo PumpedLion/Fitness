@@ -33,9 +33,7 @@ public class UserLoginServlet extends HttpServlet {
 
         if (email == null || password == null || email.trim().isEmpty() || password.trim().isEmpty()) {
             System.out.println("Email or password is empty");
-            request.setAttribute("errorMessage", "Email and password are required.");
-            RequestDispatcher rd = request.getRequestDispatcher("View/Index.jsp");
-            rd.forward(request, response);
+            response.sendRedirect(request.getContextPath() + "/View/Index.jsp?error=empty");
             return;
         }
 
@@ -90,9 +88,7 @@ public class UserLoginServlet extends HttpServlet {
             }
         } else {
             System.out.println("Login failed - Invalid credentials");
-            request.setAttribute("errorMessage", "Invalid email or password.");
-            RequestDispatcher rd = request.getRequestDispatcher("View/Index.jsp");
-            rd.forward(request, response);
+            response.sendRedirect(request.getContextPath() + "/View/Index.jsp?error=invalid");
         }
     }
 
