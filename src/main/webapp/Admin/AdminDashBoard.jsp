@@ -263,7 +263,7 @@
         <div class="logo">FitnessPro</div>
         <div class="links">
             <a href="AdminPanel.jsp">Admin Profile</a>
-            <a href="CreateAdmin.jsp">Create Admin</a>
+            
             <a href="#"><%= userName %> <span class="user-badge">Admin</span></a>
             <a href="#" onclick="showLogoutModal(); return false;">Logout</a>
         </div>

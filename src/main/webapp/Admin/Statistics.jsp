@@ -308,7 +308,7 @@
         <a href="Statistics.jsp" class="active">Statistics</a>
         <a href="Manage.jsp">Manage Users</a>
         <a href="AdminPanel.jsp">Admin Profile</a>
-        <a href="CreateAdmin.jsp">Create Admin</a>
+       
         <a href="#"><%= userName %> <span class="user-badge">Admin</span></a>
         <a href="javascript:void(0)" onclick="showLogoutModal()">Logout</a>
     </div>
