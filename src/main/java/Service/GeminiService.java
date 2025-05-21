@@ -33,7 +33,7 @@ public class GeminiService {
 
     private String createRequestBody(String prompt) {
         return String.format(
-            "{\"contents\":[{\"parts\":[{\"text\":\"%s\"}]}],\"generationConfig\":{\"temperature\":0.7,\"topK\":40,\"topP\":0.95,\"maxOutputTokens\":2048}}",
+            "{\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"%s\"}]}]}",
             prompt.replace("\"", "\\\"")
         );
     }
@@ -61,27 +61,106 @@ public class GeminiService {
         return response.body();
     }
 
-    private String parseGeminiResponse(String responseJson) throws Exception {
+    private String parseGeminiResponse(String response) throws Exception {
         try {
-            System.out.println("Parsing response: " + responseJson);
+            System.out.println("Starting to parse response...");
+            System.out.println("Response length: " + response.length());
+            System.out.println("First 200 characters of response: " + response.substring(0, Math.min(200, response.length())));
             
-            // Extract the text from the response
-            int textStart = responseJson.indexOf("\"text\":\"");
+            // Find the start of the text content by looking for the nested structure
+            int candidatesStart = response.indexOf("\"candidates\":");
+            if (candidatesStart == -1) {
+                System.out.println("No candidates array found in response");
+                throw new Exception("No candidates array found in response");
+            }
+            System.out.println("Found candidates array at position: " + candidatesStart);
+            
+            int contentStart = response.indexOf("\"content\":", candidatesStart);
+            if (contentStart == -1) {
+                System.out.println("No content object found in response");
+                throw new Exception("No content object found in response");
+            }
+            System.out.println("Found content object at position: " + contentStart);
+            
+            int partsStart = response.indexOf("\"parts\":", contentStart);
+            if (partsStart == -1) {
+                System.out.println("No parts array found in response");
+                throw new Exception("No parts array found in response");
+            }
+            System.out.println("Found parts array at position: " + partsStart);
+            
+            // Look for the text field within the parts array, accounting for whitespace
+            int textStart = response.indexOf("\"text\":", partsStart);
             if (textStart == -1) {
+                System.out.println("No text field found in response");
                 throw new Exception("No text field found in response");
             }
+            System.out.println("Found text field at position: " + textStart);
             
-            textStart += 8; // Skip "text":"
-            int textEnd = responseJson.indexOf("\"", textStart);
-            if (textEnd == -1) {
-                throw new Exception("Invalid text format in response");
+            // Move past the "text":" part and any whitespace
+            textStart = response.indexOf("\"", textStart + 7);
+            if (textStart == -1) {
+                throw new Exception("Invalid text field format - no opening quote found");
+            }
+            textStart += 1; // Move past the opening quote
+            
+            // Find the end of the text content by looking for the closing quote
+            int textEnd = textStart;
+            boolean inEscape = false;
+            int braceCount = 0;
+            
+            while (textEnd < response.length()) {
+                char c = response.charAt(textEnd);
+                
+                if (c == '\\') {
+                    inEscape = !inEscape;
+                } else if (c == '"' && !inEscape) {
+                    // Check if this is the end of the text content
+                    int nextChar = textEnd + 1;
+                    while (nextChar < response.length() && Character.isWhitespace(response.charAt(nextChar))) {
+                        nextChar++;
+                    }
+                    if (nextChar < response.length() && response.charAt(nextChar) == '}') {
+                        break;
+                    }
+                } else if (c == '{' && !inEscape) {
+                    braceCount++;
+                } else if (c == '}' && !inEscape) {
+                    braceCount--;
+                    if (braceCount < 0) {
+                        break;
+                    }
+                }
+                
+                inEscape = false;
+                textEnd++;
             }
             
-            String text = responseJson.substring(textStart, textEnd);
-            return text.replace("\\n", "\n").replace("\\\"", "\"");
+            if (textEnd >= response.length()) {
+                throw new Exception("Invalid text field format - no closing quote found");
+            }
+            
+            // Extract the text content
+            String text = response.substring(textStart, textEnd);
+            System.out.println("Extracted text length: " + text.length());
+            System.out.println("First 100 characters of extracted text: " + text.substring(0, Math.min(100, text.length())));
+            
+            // Handle escape sequences
+            text = text.replace("\\n", "\n")
+                      .replace("\\\"", "\"")
+                      .replace("\\\\", "\\")
+                      .replace("\\r", "\r")
+                      .replace("\\t", "\t")
+                      .replace("\\b", "\b")
+                      .replace("\\f", "\f");
+            
+            System.out.println("Successfully extracted text content");
+            return text;
+            
         } catch (Exception e) {
-            System.err.println("Error parsing response: " + e.getMessage());
-            throw new Exception("Failed to parse API response: " + e.getMessage() + "\nResponse was: " + responseJson);
+            System.out.println("Error parsing response: " + e.getMessage());
+            System.out.println("Full response was: " + response);
+            throw new Exception("Failed to parse API response: " + e.getMessage());
         }
     }
 } 

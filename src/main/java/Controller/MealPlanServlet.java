@@ -19,6 +19,7 @@ import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
+import java.util.Date;
 
 @WebServlet("/MealPlanServlet")
 @MultipartConfig(
@@ -85,7 +86,7 @@ public class MealPlanServlet extends HttpServlet {
             switch (action) {
                 case "generate":
                     System.out.println("Generating plan...");
-                    generatePlan(request, response, userId);
+                    generatePlan(request, response);
                     break;
                 case "delete":
                     System.out.println("Deleting plan...");
@@ -145,74 +146,68 @@ public class MealPlanServlet extends HttpServlet {
         }
     }
 
-    private void generatePlan(HttpServletRequest request, HttpServletResponse response, int userId)
-            throws IOException {
-        System.out.println("generatePlan method called for user: " + userId);
-        PrintWriter out = response.getWriter();
-
+    private void generatePlan(HttpServletRequest request, HttpServletResponse response) throws Exception {
         try {
-            // Get user's fitness profile
-            FitnessProfile profile = profileDAO.getFitnessProfileByUserId(userId);
-            System.out.println("Fitness profile retrieved: " + (profile != null));
-            
-            if (profile == null) {
-                System.out.println("No fitness profile found for user: " + userId);
-                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                out.print("{\"error\": \"Please complete your fitness profile first\"}");
-                return;
+            // Get user ID from session
+            HttpSession session = request.getSession();
+            Integer userId = (Integer) session.getAttribute("userId");
+            System.out.println("Generating plan for user ID: " + userId);
+
+            if (userId == null) {
+                throw new Exception("User not logged in");
             }
 
-            System.out.println("User profile for plan generation: " + profile);
+            // Get user's fitness profile
+            FitnessProfile profile = profileDAO.getFitnessProfileByUserId(userId);
+            System.out.println("Retrieved fitness profile for user ID: " + userId);
 
-            // Create workout plan prompt
-            String workoutPrompt = String.format(
-                "Create a personalized 7-day workout plan for a %d-year-old %s, " +
-                "weight: %dkg, height: %dcm, " +
-                "with activity level: %s. " +
-                "Their fitness goals are: %s. " +
-                "%s " +
-                "Format the plan by day (Day 1, Day 2, etc.), including specific exercises, " +
-                "sets, reps, and rest periods. Include warm-up and cool-down routines. " +
-                "Provide clear, detailed instructions that would be suitable for their fitness level.",
+            if (profile == null) {
+                throw new Exception("Fitness profile not found");
+            }
+
+            // Create a combined prompt for both workout and meal plans
+            String prompt = String.format(
+                "Create a comprehensive 7-day fitness plan for a %d-year-old %s, weight: %dkg, height: %dcm, with activity level: %s. Their fitness goals are: %s. Health issues to consider: %s\n Dietary restrictions: %s\n\n" +
+                "Please provide two sections:\n" +
+                "1. WORKOUT PLAN: Include specific exercises, sets, reps, and rest periods for each day. Include warm-up and cool-down routines.\n" +
+                "2. MEAL PLAN: Include breakfast, lunch, dinner, and snacks for each day, with portion sizes and approximate calorie counts.\n" +
+                "Format each section clearly with day-by-day breakdowns.",
                 profile.getAge(),
-                profile.getGender().toLowerCase(),
+                profile.getGender(),
                 profile.getWeight(),
                 profile.getHeight(),
                 profile.getActivityLevel(),
                 profile.getGoal(),
-                profile.getHealthIssues() != null ? 
-                    "Health issues to consider: " + profile.getHealthIssues() : ""
+                profile.getHealthIssues() != null ? "Health issues to consider: " + profile.getHealthIssues() + "\n" : "",
+                profile.getDietaryRestrictions() != null ? "Dietary restrictions: " + profile.getDietaryRestrictions() + "\n" : ""
             );
 
-            // Create meal plan prompt
-            String mealPrompt = String.format(
-                "Create a 7-day meal plan for a %d-year-old %s, " +
-                "weight: %dkg, height: %dcm, " +
-                "with activity level: %s. " +
-                "Their fitness goals are: %s. " +
-                "%s " +
-                "The meal plan should include breakfast, lunch, dinner, and snacks for each day. " +
-                "Specify portion sizes and approximate calorie counts per meal. " +
-                "Focus on whole, nutrient-dense foods that support their fitness goals.",
-                profile.getAge(),
-                profile.getGender().toLowerCase(),
-                profile.getWeight(),
-                profile.getHeight(),
-                profile.getActivityLevel(),
-                profile.getGoal(),
-                profile.getDietaryRestrictions() != null ? 
-                    "Dietary restrictions: " + profile.getDietaryRestrictions() : ""
-            );
+            System.out.println("Generated prompt: " + prompt);
 
-            System.out.println("Generating workout plan...");
-            String workoutPlan = geminiService.generateWorkoutPlan(workoutPrompt);
-            System.out.println("Workout plan generated successfully");
+            // Generate the combined plan
+            String combinedPlan = geminiService.generateWorkoutPlan(prompt);
+            System.out.println("Combined plan generated successfully");
+            System.out.println("Plan length: " + combinedPlan.length());
+            System.out.println("First 200 characters of plan: " + combinedPlan.substring(0, Math.min(200, combinedPlan.length())));
 
-            System.out.println("Generating meal plan...");
-            String mealPlan = geminiService.generateMealPlan(mealPrompt);
-            System.out.println("Meal plan generated successfully");
+            // Split the plan into workout and meal sections
+            String[] sections = combinedPlan.split("##\\s*2\\.\\s*MEAL\\s*PLAN");
+            if (sections.length != 2) {
+                System.out.println("Failed to split plan into sections. Number of sections: " + sections.length);
+                System.out.println("Plan content: " + combinedPlan);
+                throw new Exception("Failed to parse the generated plan into workout and meal sections");
+            }
 
-            // Save the generated plan
+            // Extract workout plan (remove the first section header)
+            String workoutPlan = sections[0].replaceAll("##\\s*1\\.\\s*WORKOUT\\s*PLAN", "").trim();
+            
+            // Add back the meal plan header
+            String mealPlan = "## 2. MEAL PLAN" + sections[1].trim();
+
+            System.out.println("Workout plan length: " + workoutPlan.length());
+            System.out.println("Meal plan length: " + mealPlan.length());
+
+            // Save the generated plans
             String title = request.getParameter("title");
             if (title == null || title.trim().isEmpty()) {
                 title = "Fitness Plan";
@@ -224,17 +219,43 @@ public class MealPlanServlet extends HttpServlet {
             System.out.println("Plan saved to database: " + success);
 
             if (success) {
-                out.print("{\"message\": \"Plan generated successfully\", \"plan\": " + plan.toString() + "}");
+                response.setContentType("application/json");
+                // Create a JSON object with properly escaped strings
+                String jsonResponse = String.format(
+                    "{\"status\":\"success\",\"message\":\"Plan generated successfully\",\"plan\":{\"id\":%d,\"userId\":%d,\"title\":\"%s\",\"workoutPlan\":\"%s\",\"mealPlan\":\"%s\",\"createdAt\":\"%s\"}}",
+                    plan.getId(),
+                    plan.getUserId(),
+                    escapeJsonString(plan.getTitle()),
+                    escapeJsonString(plan.getWorkoutPlan()),
+                    escapeJsonString(plan.getMealPlan()),
+                    plan.getCreatedAt()
+                );
+                response.getWriter().write(jsonResponse);
             } else {
                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                out.print("{\"error\": \"Failed to save plan to database\"}");
+                response.getWriter().write("{\"status\":\"error\",\"message\":\"Failed to save plan to database\"}");
             }
         } catch (Exception e) {
-            System.err.println("Error generating plan: " + e.getMessage());
+            System.out.println("Error generating plan: " + e.getMessage());
             e.printStackTrace();
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            out.print("{\"error\": \"Failed to generate plan: " + e.getMessage().replace("\"", "'") + "\"}");
+            response.setContentType("application/json");
+            response.getWriter().write("{\"status\":\"error\",\"message\":\"" + escapeJsonString(e.getMessage()) + "\"}");
         }
+    }
+
+    private String escapeJsonString(String input) {
+        if (input == null) {
+            return "";
+        }
+        return input.replace("\\", "\\\\")
+                   .replace("\"", "\\\"")
+                   .replace("\n", "\\n")
+                   .replace("\r", "\\r")
+                   .replace("\t", "\\t")
+                   .replace("\b", "\\b")
+                   .replace("\f", "\\f")
+                   .replace("/", "\\/");
     }
 
     private void deleteMealPlan(HttpServletRequest request, HttpServletResponse response, int userId)
